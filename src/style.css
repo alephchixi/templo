@@ -1,0 +1,258 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #000;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+#canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  transition: opacity 2s ease-in-out;
+  cursor: pointer;
+}
+
+#overlay.active {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.content {
+  text-align: center;
+  color: white;
+  pointer-events: none;
+}
+
+h1 {
+  font-weight: 200;
+  letter-spacing: 2px;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+}
+
+p {
+  font-weight: 100;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Delicate Control Panel */
+#control-panel {
+  position: absolute;
+  top: 60px;
+  /* Moved down to make room for top-right text */
+  right: 20px;
+  width: 220px;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+#control-panel.collapsed {
+  height: 20px;
+  overflow: hidden;
+  padding: 10px 15px;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: none;
+  border-color: transparent;
+}
+
+#control-panel.collapsed .controls-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#control-panel.collapsed:hover {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 200;
+  opacity: 0.8;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 14px;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+}
+
+.control-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sensor-toggle {
+  background: transparent;
+  border: none;
+  color: white;
+  opacity: 0.3;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 5px;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+.sensor-toggle.active {
+  background: transparent;
+  box-shadow: none;
+  opacity: 1.0;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+  font-weight: bold;
+}
+
+.delicate-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  margin: 10px 0;
+}
+
+.delicate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.1s;
+}
+
+.delicate-slider:disabled::-webkit-slider-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  width: 4px;
+  height: 4px;
+}
+
+.delicate-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.5);
+}
+
+.value-display {
+  text-align: right;
+  opacity: 0.5;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.value-display.manual {
+  color: #ffaa6e;
+  opacity: 1;
+}
+
+/* Footer Credits */
+.footer-link {
+  position: absolute;
+  bottom: 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  /* Increased size */
+  text-decoration: none;
+  font-family: monospace;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+  letter-spacing: 1px;
+}
+
+.footer-link:hover {
+  opacity: 1;
+  color: white;
+}
+
+.footer-link.left {
+  left: 20px;
+}
+
+.footer-link.right {
+  right: 20px;
+}
+
+/* Top Corner Texts */
+.corner-text {
+  position: absolute;
+  top: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  /* Increased size */
+  font-family: monospace;
+  z-index: 100;
+  pointer-events: none;
+  letter-spacing: 1px;
+  text-transform: lowercase;
+}
+
+.corner-text.top-left {
+  left: 20px;
+}
+
+.corner-text.top-right {
+  right: 20px;
+}
