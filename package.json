@@ -10,10 +10,10 @@
     "deploy:cf": "npm run build && npx wrangler deploy --name templo-static --assets dist --domains templo.alephchixi.xyz --compatibility-date 2026-04-03"
   },
   "dependencies": {
-    "three": "^0.160.0",
+    "three": "^0.186.1",
     "tone": "^14.7.77"
   },
   "devDependencies": {
-    "vite": "^8.0.14"
+    "vite": "^8.3.5"
   }
 }
