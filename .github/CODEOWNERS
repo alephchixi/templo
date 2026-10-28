@@ -1,0 +1,9 @@
+# Security-sensitive automation and dependency changes belong to the repository owner.
+/.github/ @emeisazam
+**/package.json @emeisazam
+**/package-lock.json @emeisazam
+**/pnpm-lock.yaml @emeisazam
+**/pyproject.toml @emeisazam
+**/uv.lock @emeisazam
+**/wrangler.* @emeisazam
+/scripts/*release* @emeisazam
