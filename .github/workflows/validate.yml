@@ -33,7 +33,9 @@ jobs:
       - name: Audit the complete locked dependency tree
         run: npm audit --audit-level=low
       - name: Validate application
-        run: npm run build
+        run: |
+          npm test
+          npm run build
       - name: Install the pinned browser test runtime
         run: npx playwright install --with-deps chromium
       - name: Check built WebGL, audio startup, and controls without external requests
