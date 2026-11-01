@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 2
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -29,6 +30,107 @@ jobs:
         run: node --version
       - name: Install locked dependencies
         run: npm ci
+      - name: Audit the complete locked dependency tree
+        run: npm audit --audit-level=low
       - name: Validate application
         run: |
+          npm test
           npm run build
+      - name: Install the pinned browser test runtime
+        run: npx playwright install --with-deps chromium
+      - name: Check built WebGL, audio startup, and controls without external requests
+        run: npm run test:e2e
+      - name: Build the PR base for generated-file review
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          base_dir="$RUNNER_TEMP/templo-base"
+          mkdir "$base_dir"
+          git archive "$BASE_SHA" | tar -x -C "$base_dir" --exclude=node_modules --exclude=dist
+          cd "$base_dir"
+          npm ci
+          npm run build
+      - name: Stage only the public static build and hash receipts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { copyFile, lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+          import path from 'node:path';
+
+          const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+          const baseRoot = path.join(process.env.RUNNER_TEMP, 'templo-base');
+          const review = path.join(process.env.RUNNER_TEMP, 'templo-public-review');
+          async function inventory(root, relative = '') {
+            const files = [];
+            for (const entry of await readdir(path.join(root, relative), { withFileTypes: true })) {
+              const name = path.posix.join(relative, entry.name);
+              if (entry.isDirectory()) files.push(...await inventory(root, name));
+              else {
+                const absolute = path.join(root, name);
+                const stat = await lstat(absolute);
+                if (!stat.isFile()) throw new Error('Review requires regular files');
+                const bytes = await readFile(absolute);
+                files.push({ path: name, bytes: stat.size, sha256: hash(bytes) });
+              }
+            }
+            return files.sort((a, b) => a.path.localeCompare(b.path, 'en'));
+          }
+          const baseFiles = await inventory(path.join(baseRoot, 'dist'));
+          const headFiles = await inventory('dist');
+          for (const file of headFiles) {
+            if (!(file.path === 'index.html' || /^assets\/[A-Za-z0-9_-]+\.(js|css)$/.test(file.path))) {
+              throw new Error('Unexpected public build path');
+            }
+            if (file.bytes > 5_000_000) throw new Error('Public file exceeds review bound');
+            const bytes = await readFile(path.join('dist', file.path));
+            const text = bytes.toString('utf8');
+            if (/\/Users\/|\/Volumes\/|\/home\/runner\/|file:\/\/\//.test(text) ||
+                /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(text)) {
+              throw new Error('Public build contains an operator path or private-key marker');
+            }
+            const destination = path.join(review, 'public', file.path);
+            await mkdir(path.dirname(destination), { recursive: true });
+            await copyFile(path.join('dist', file.path), destination);
+          }
+          const base = new Map(baseFiles.map(file => [file.path, file]));
+          const head = new Map(headFiles.map(file => [file.path, file]));
+          const changedFiles = [...new Set([...base.keys(), ...head.keys()])].sort().filter(name =>
+            base.get(name)?.sha256 !== head.get(name)?.sha256);
+          const runtime = lock => Object.fromEntries(Object.entries(lock.packages).filter(([name, item]) => name && !item.dev));
+          const baseRuntime = runtime(JSON.parse(await readFile(path.join(baseRoot, 'package-lock.json'), 'utf8')));
+          const headRuntime = runtime(JSON.parse(await readFile('package-lock.json', 'utf8')));
+          const changedRuntimeEntries = [...new Set([...Object.keys(baseRuntime), ...Object.keys(headRuntime)])]
+            .sort().filter(name => JSON.stringify(baseRuntime[name]) !== JSON.stringify(headRuntime[name]));
+          async function sourceInventory(root) {
+            const sources = (await inventory(path.join(root, 'src'))).map(file => ({ ...file, path: 'src/' + file.path }));
+            for (const name of ['index.html', 'vite.config.js']) {
+              const bytes = await readFile(path.join(root, name));
+              sources.push({ path: name, bytes: bytes.length, sha256: hash(bytes) });
+            }
+            return new Map(sources.map(file => [file.path, file]));
+          }
+          const baseSources = await sourceInventory(baseRoot);
+          const headSources = await sourceInventory('.');
+          const changedSourceFiles = [...new Set([...baseSources.keys(), ...headSources.keys()])].sort().filter(name =>
+            baseSources.get(name)?.sha256 !== headSources.get(name)?.sha256);
+          const receipt = { schema: 1, baseSha: process.env.BASE_SHA, headSha: process.env.HEAD_SHA,
+            checkoutSha: process.env.GITHUB_SHA, baseFiles, headFiles, changedFiles,
+            changedRuntimeEntries, changedSourceFiles,
+            scope: 'Public static output and input hashes only; no deployment or human listening qualification.' };
+          await mkdir(review, { recursive: true });
+          await writeFile(path.join(review, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
+          console.log(`Public build staged: ${headFiles.length} files; ${changedFiles.length} changed paths, ${changedRuntimeEntries.length} runtime entries, ${changedSourceFiles.length} artwork source files.`);
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name == 'pull_request'
+        with:
+          name: templo-public-review
+          path: ${{ runner.temp }}/templo-public-review
+          if-no-files-found: error
+          retention-days: 7

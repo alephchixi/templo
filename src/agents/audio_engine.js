@@ -1,4 +1,5 @@
 import * as Tone from 'tone';
+import { delaySecondsForLatency, MAX_DELAY_SECONDS } from './audio_limits.js';
 
 export class AudioEngine {
     constructor(systemState) {
@@ -23,6 +24,7 @@ export class AudioEngine {
 
         this.delay = new Tone.FeedbackDelay({
             delayTime: 0.5,
+            maxDelay: MAX_DELAY_SECONDS,
             feedback: 0.3,
             wet: 0.3
         }).connect(this.reverb);
@@ -133,10 +135,9 @@ export class AudioEngine {
         });
 
         // 3. Latency -> "Dilated" Delay
-        // Longer ramp times (3s), longer max delay time
+        // Keep the 3s ramp within the existing allocated delay buffer.
         const latency = state.latency || 0;
-        // Map latency (0-1000ms typically) to delay time (0.5s to 2.5s)
-        const delayTime = Tone.Time((latency / 400) + 0.5).toSeconds();
+        const delayTime = Tone.Time(delaySecondsForLatency(latency)).toSeconds();
         this.delay.delayTime.rampTo(delayTime, 3); // 3s ramp = "Dilated/Breathing"
 
         // Feedback
