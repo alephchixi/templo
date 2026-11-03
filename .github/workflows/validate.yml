@@ -84,7 +84,7 @@ jobs:
           const baseFiles = await inventory(path.join(baseRoot, 'dist'));
           const headFiles = await inventory('dist');
           for (const file of headFiles) {
-            if (!(file.path === 'index.html' || /^assets\/[A-Za-z0-9_-]+\.(js|css)$/.test(file.path))) {
+            if (!(file.path === 'index.html' || file.path === '_headers' || /^assets\/[A-Za-z0-9_-]+\.(js|css)$/.test(file.path))) {
               throw new Error('Unexpected public build path');
             }
             if (file.bytes > 5_000_000) throw new Error('Public file exceeds review bound');
